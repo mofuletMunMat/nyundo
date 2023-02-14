@@ -1,0 +1,67 @@
+version: '3'
+
+services:
+  spark-master:
+    image: bde2020/spark-master:3.0.1-hadoop3.2
+    container_name: spark-master
+    hostname: spark-master
+    environment:
+      - INIT_DAEMON_STEP=setup_spark
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+
+  spark-worker:
+    image: bde2020/spark-worker:3.0.1-hadoop3.2
+    container_name: spark-worker
+    environment:
+      - "SPARK_MASTER=spark://spark-master:7077"
+    depends_on:
+      - spark-master
+    ports:
+      - "8081:8081"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:6.2.0
+    container_name: zookeeper
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:6.2.0
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+
+  postgres:
+    image: postgres:12-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  jupyter:
+    image: jupyter/all-spark-notebook:latest
+    container_name: jupyter
+    ports:
+      - "8888:8888"
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - spark-master
+
+volumes:
+  postgres:
